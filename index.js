@@ -29,6 +29,33 @@ async function run() {
 
     const packageCollection=client.db("TouristDb").collection("package");
     const cartCollection=client.db("TouristDb").collection("carts");
+    const userCollection=client.db("TouristDb").collection("users");
+
+  //  user related api
+  app.post('/users',async(req,res)=>{
+    const user=req.body;
+    const query={email : user.email}
+    const existingUser=await userCollection.findOne(query);
+    if(existingUser){
+      return res.send({message:'user already exists',insertedId:null})
+    }
+    const result=await userCollection.insertOne(user);
+    res.send(result)
+
+  })
+  app.get('/users',async(req,res)=>{
+    const result=await userCollection.find().toArray();
+    res.send(result);
+})
+// 
+app.delete('/users/:id',async(req,res)=>{
+  const id=req.params.id;
+  const query={_id:new ObjectId(id)}
+  const result=await cartCollection.deleteOne(query);
+  res.send(result);
+})
+// admin route
+
     app.get('/package',async(req,res)=>{
         const result=await packageCollection.find().toArray();
         res.send(result);
@@ -51,6 +78,12 @@ async function run() {
       const cartItem=req.body;
       const result =await cartCollection.insertOne(cartItem);
       res.send(result); 
+    })
+    app.delete('/carts/:id',async(req,res)=>{
+      const id=req.params.id;
+      const query={_id:new ObjectId(id)}
+      const result=await cartCollection.deleteOne(query);
+      res.send(result);
     })
 
     // Send a ping to confirm a successful connection
