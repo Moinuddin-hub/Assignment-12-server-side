@@ -1,5 +1,6 @@
 const express = require('express')
 const app = express()
+var jwt = require('jsonwebtoken');
 require('dotenv').config()
 const cors=require('cors')
 const port = process.env.PORT || 5000
@@ -48,10 +49,22 @@ async function run() {
     res.send(result);
 })
 // 
+app.patch('/users/admin/:id',async(req,res)=>{
+  const id=req.params.id;
+  const filter={_id:(id)};
+  const updateDoc={
+    $set:{
+      role:'admin'
+    }
+  }
+  const result=await userCollection.updateOne(filter,updateDoc);
+  res.send(result);
+})
+
 app.delete('/users/:id',async(req,res)=>{
   const id=req.params.id;
-  const query={_id:new ObjectId(id)}
-  const result=await cartCollection.deleteOne(query);
+  const query={_id:(id)}
+  const result=await userCollection.deleteOne(query);
   res.send(result);
 })
 // admin route
@@ -66,6 +79,12 @@ app.delete('/users/:id',async(req,res)=>{
       const result=await packageCollection.find({_id : (id)}).toArray();
       console.log(result);
       res.send(result);
+    })
+    app.post('/package',async(req,res)=>{
+      const id=req.body;
+      const result =await packageCollection.insertOne(id);
+      console.log(result);
+      res.send(result); 
     })
     // package collection
     app.get('/carts',async(req,res)=>{
