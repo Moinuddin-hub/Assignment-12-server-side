@@ -31,8 +31,65 @@ async function run() {
     const packageCollection=client.db("TouristDb").collection("package");
     const cartCollection=client.db("TouristDb").collection("carts");
     const userCollection=client.db("TouristDb").collection("users");
+    const storyCollection=client.db("TouristDb").collection("story");
+    const bookingCollection=client.db("TouristDb").collection("booking");
+
+    // jwt related api
+    app.post('/jwt',async(req,res)=>{
+      const user=req.body;
+      const token=jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'});
+      res.send({token});
+    })
+
+    // verify token middlewares
+    const verifyToken=(req,res,next)=>{
+      console.log('inside verify token', req.headers.authorization);
+      if(!req.headers.authorization){
+        return res.status(401).send({message:'forbidden access'})
+      }
+      const token=req.headers.authorization.split(' ')[1];
+       jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+          if(err){
+            return res.status(401).send({message:'unauthorized access'})
+          }
+          req.decoded=decoded;
+          next();
+       })
+    }
+    // verifyAdmin
+    const verifyAdmin=async(req,res,next)=>{
+      const email=req.decoded.email;
+      const query={email:email};
+      const user=await userCollection.findOne(query);
+      const isAdmin=user?.role==='admin';
+      if(!isAdmin){
+       return res.status(403).send({message:'forbidden access'});
+      }
+      next()
+   }
+
 
   //  user related api
+  app.get('/users',verifyToken,verifyAdmin, async(req,res)=>{
+    console.log(req.headers);
+    const result=await userCollection.find().toArray();
+    res.send(result);
+})
+app.get('/users/admin/:email',verifyToken ,async(req,res)=>{
+  const email=req.params.email;
+  if(email!==req.decoded.email){
+   return res.status(403).send({message:'unauthorized access'})
+  }
+  const query={email:email};
+  const user=await userCollection.findOne(query);
+  let admin=false;
+  if(user){
+   admin=user?.role==='admin';
+  }
+  res.send({admin})
+})
+
+
   app.post('/users',async(req,res)=>{
     const user=req.body;
     const query={email : user.email}
@@ -44,10 +101,20 @@ async function run() {
     res.send(result)
 
   })
-  app.get('/users',async(req,res)=>{
-    const result=await userCollection.find().toArray();
+  // story api
+  app.get('/story',async(req,res)=>{
+    const result=await storyCollection.find().toArray();
     res.send(result);
 })
+
+app.get('/story/:id',async(req,res)=>{
+  const id=req.params.id;
+  console.log(id);
+  const result=await storyCollection.find({_id : (id)}).toArray();
+  console.log(result);
+  res.send(result);
+})
+
 // 
 app.patch('/users/admin/:id',async(req,res)=>{
   const id=req.params.id;
@@ -83,6 +150,17 @@ app.delete('/users/:id',async(req,res)=>{
     app.post('/package',async(req,res)=>{
       const id=req.body;
       const result =await packageCollection.insertOne(id);
+      console.log(result);
+      res.send(result); 
+    })
+    // Booking
+    app.get('/booking',async(req,res)=>{
+      const result=await bookingCollection.find().toArray();
+      res.send(result);
+  })
+    app.post('/booking',async(req,res)=>{
+      const id=req.body;
+      const result =await bookingCollection.insertOne(id);
       console.log(result);
       res.send(result); 
     })
